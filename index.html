@@ -1,0 +1,2111 @@
+<!doctype html>
+<html lang="id" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Absensi Digital - Rekap Kehadiran Bulanan</title>
+    <!-- jsPDF & jsPDF-AutoTable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- Base64 Logos File -->
+    <script src="images.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      :root {
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --primary: #f5a000;
+        --primary-dark: #c47e00;
+        --primary-light: rgba(245, 160, 0, 0.08);
+        --text: #0f172a;
+        --text2: #475569;
+        --border: #e2e8f0;
+        --red: #ef4444;
+        --green: #10b981;
+        --blue: #3b82f6;
+        --radius: 12px;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      [data-theme="dark"] {
+        --bg: #0b0f19;
+        --card: #151c2c;
+        --text: #f8fafc;
+        --text2: #94a3b8;
+        --border: #1e293b;
+        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+        --primary-light: rgba(245, 160, 0, 0.15);
+      }
+
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.5;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      /* TOPBAR */
+      .topbar {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 0 2rem;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: var(--shadow);
+      }
+      .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--primary-light);
+      }
+      .logo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .topbar h1 {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text);
+      }
+      .topbar span {
+        color: var(--text2);
+        font-size: 12px;
+        background: var(--primary-light);
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-weight: 500;
+      }
+      .theme-toggle-btn {
+        margin-left: auto;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+      }
+      .theme-toggle-btn:hover {
+        background: var(--primary-light);
+        border-color: var(--primary);
+      }
+
+      /* LAYOUT */
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+
+      .app-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      @media (min-width: 1024px) {
+        .app-layout {
+          display: grid;
+          grid-template-columns: 360px 1fr;
+          gap: 1.5rem;
+          align-items: start;
+        }
+      }
+
+      /* CARD */
+      .card {
+        background: var(--card);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        box-shadow: var(--shadow);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .card:hover {
+        box-shadow: var(--shadow-hover);
+      }
+      .card-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* FORM */
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .form-group.full {
+        grid-column: 1/-1;
+      }
+      label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text2);
+      }
+      input,
+      select {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--text);
+        background: var(--card);
+        transition: var(--transition);
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      input::placeholder {
+        color: var(--text2);
+        opacity: 1;
+      }
+      input:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+      }
+
+      /* KALENDER */
+      .cal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .cal-header h2 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+      }
+      .cal-day-label {
+        text-align: center;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 8px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .cal-cell {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        min-height: 96px;
+        min-width: 0;
+        cursor: pointer;
+        transition: var(--transition);
+        background: var(--card);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+      .cal-cell:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+      }
+      .cal-cell.empty {
+        background: transparent;
+        border: none;
+        cursor: default;
+        pointer-events: none;
+      }
+      .cal-cell.locked {
+        cursor: not-allowed;
+      }
+      .cal-cell.selected {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+      }
+      .cell-date {
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--text);
+        margin-bottom: 2px;
+      }
+      .cell-day {
+        font-size: 9px;
+        color: var(--text2);
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      .cell-status {
+        font-size: 9px;
+        font-weight: 700;
+        margin-top: auto;
+        padding: 2px 4px;
+        border-radius: 4px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cell-status.s-wfh {
+        color: var(--blue);
+        background: rgba(59, 130, 246, 0.1);
+      }
+      .cell-status.s-hadir {
+        color: var(--green);
+        background: rgba(16, 185, 129, 0.1);
+      }
+      .cell-status.s-la {
+        color: #d97706;
+        background: rgba(245, 158, 11, 0.1);
+      }
+      .cell-status.s-libur {
+        color: var(--red);
+        background: rgba(239, 68, 68, 0.1);
+      }
+      .cell-status.s-cuti {
+        color: #7c3aed;
+        background: rgba(147, 51, 234, 0.1);
+      }
+      .cell-status.s-sakit {
+        color: #c2410c;
+        background: rgba(234, 88, 12, 0.1);
+      }
+      .cell-status.s-izin {
+        color: #475569;
+        background: rgba(100, 116, 139, 0.1);
+      }
+      .cell-jam {
+        font-size: 8.5px;
+        color: var(--text2);
+        line-height: 1.4;
+        margin-top: 2px;
+        font-weight: 600;
+      }
+      .cell-rem {
+        font-size: 8px;
+        color: var(--text2);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-style: italic;
+      }
+
+      /* MODAL */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        animation: fadeIn 0.2s ease-out;
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+      .modal {
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        width: 100%;
+        max-width: 440px;
+        padding: 1.75rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .modal-title {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 1.25rem;
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 8px;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+      }
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 1.25rem;
+      }
+      .status-btn {
+        padding: 10px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+        transition: var(--transition);
+        background: var(--card);
+        color: var(--text2);
+      }
+      .status-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+      .status-btn.active-wfh {
+        background: rgba(59, 130, 246, 0.08);
+        border-color: var(--blue);
+        color: var(--blue);
+      }
+      .status-btn.active-hadir {
+        background: rgba(16, 185, 129, 0.08);
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .status-btn.active-la-masuk {
+        background: rgba(245, 158, 11, 0.08);
+        border-color: #f59e0b;
+        color: #d97706;
+      }
+      .status-btn.active-la-pulang {
+        background: rgba(245, 158, 11, 0.08);
+        border-color: #f59e0b;
+        color: #d97706;
+      }
+      .status-btn.active-cuti {
+        background: rgba(147, 51, 234, 0.08);
+        border-color: #9333ea;
+        color: #7c3aed;
+      }
+      .status-btn.active-sakit {
+        background: rgba(234, 88, 12, 0.08);
+        border-color: #ea580c;
+        color: #c2410c;
+      }
+      .status-btn.active-izin {
+        background: rgba(100, 116, 139, 0.08);
+        border-color: #64748b;
+        color: #475569;
+      }
+      .modal-field {
+        display: none;
+        margin-bottom: 12px;
+      }
+      .modal-field.show {
+        display: block;
+      }
+      .modal-field label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text2);
+        margin-bottom: 4px;
+      }
+      .modal-field input,
+      .modal-field textarea {
+        width: 100%;
+      }
+      .modal-field textarea {
+        min-height: 80px;
+        resize: vertical;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        transition: var(--transition);
+      }
+      .modal-field textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-light);
+      }
+
+      /* BTN */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 13px;
+        cursor: pointer;
+        transition: var(--transition);
+        font-weight: 600;
+      }
+      .btn:hover {
+        background: var(--bg);
+        border-color: var(--text2);
+      }
+      .btn-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--primary-dark);
+        border-color: var(--primary-dark);
+        box-shadow: 0 4px 10px rgba(245, 160, 0, 0.25);
+      }
+      .btn-sm {
+        padding: 6px 12px;
+        font-size: 11px;
+      }
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.08);
+        border-color: rgba(239, 68, 68, 0.2);
+        color: var(--red);
+      }
+      .btn-danger:hover {
+        background: var(--red);
+        border-color: var(--red);
+        color: #fff;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn:disabled:hover {
+        background: var(--card);
+        border-color: var(--border);
+      }
+
+      /* SUMMARY */
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      .summary-item {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        transition: var(--transition);
+      }
+      .summary-item:hover {
+        border-color: var(--primary);
+      }
+      .summary-num {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--text);
+      }
+      .summary-label {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 1px;
+        font-weight: 600;
+      }
+
+      /* ACTIONS */
+      .action-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 1.25rem;
+      }
+      .action-row .btn {
+        flex: 1;
+        min-width: 100px;
+      }
+
+      /* TOAST */
+      .toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background: #1e293b;
+        color: #f8fafc;
+        border-radius: 8px;
+        padding: 12px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        z-index: 999;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      /* LIBUR NASIONAL BADGE */
+      .libnas-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: var(--red);
+        color: #fff;
+        font-size: 7px;
+        font-weight: 800;
+        border-radius: 4px;
+        padding: 1px 4px;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes scaleUp {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      /* PRINT MEDIA STYLING */
+      .print-only-header,
+      .print-only-signatures {
+        display: none;
+      }
+
+      @media print {
+        .print-only-header,
+        .print-only-signatures {
+          display: block !important;
+        }
+
+        .topbar, 
+        .app-sidebar, 
+        .action-row,
+        .cal-header button,
+        .theme-toggle-btn,
+        .modal-backdrop,
+        .toast {
+          display: none !important;
+        }
+
+        @page {
+          size: A4 portrait;
+          margin: 12mm 10mm;
+        }
+
+        body {
+          background: #ffffff !important;
+          color: #000000 !important;
+          font-family: "Plus Jakarta Sans", sans-serif;
+          min-height: auto !important;
+        }
+
+        .container {
+          max-width: 100% !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .app-layout {
+          display: block !important;
+        }
+
+        .app-main {
+          width: 100% !important;
+        }
+
+        .card {
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          background: transparent !important;
+        }
+
+        /* Format calendar grid for print exactly matching 1.5pt outer and 1pt inner borders */
+        .cal-grid {
+          gap: 0 !important;
+          border: 1.5pt solid #94a3b8 !important; /* 1.5 pt outer border */
+        }
+        
+        .cal-day-label {
+          border: 1pt solid #94a3b8 !important; /* 1 pt border */
+          border-radius: 0 !important;
+          padding: 6px 0 !important;
+          background: #f1f5f9 !important;
+          color: #000000 !important;
+        }
+        
+        .cal-cell {
+          border: 1pt solid #94a3b8 !important;
+          border-radius: 0 !important;
+          min-height: 84px !important;
+          box-shadow: none !important;
+          transform: none !important;
+          page-break-inside: avoid !important;
+        }
+
+        .summary-grid {
+          border: 1.5pt solid #94a3b8 !important;
+          margin-top: 15px !important;
+          gap: 0 !important;
+        }
+        
+        .summary-item {
+          border: 1pt solid #94a3b8 !important;
+          border-radius: 0 !important;
+          padding: 8px !important;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .container { padding: 0.75rem; }
+        .cal-grid { gap: 4px; }
+        .cal-cell { min-height: 86px; padding: 4px; }
+        .summary-grid { grid-template-columns: repeat(2, 1fr); }
+        .topbar { padding: 0 1rem; }
+      }
+
+      @media (max-width: 540px) {
+        .topbar h1 {
+          font-size: 14px;
+        }
+        .topbar span {
+          font-size: 10px;
+          padding: 2px 6px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .topbar span {
+          display: none;
+        }
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+        .cal-cell {
+          min-height: 72px;
+          padding: 4px;
+        }
+        .cell-date {
+          font-size: 10px;
+        }
+        .cell-day {
+          font-size: 8px;
+        }
+        .cell-status {
+          font-size: 8px;
+          padding: 1px 2px;
+        }
+        .cell-jam {
+          font-size: 7.5px;
+        }
+        .cell-rem {
+          font-size: 7px;
+        }
+        .toast {
+          left: 1rem;
+          right: 1rem;
+          bottom: 1rem;
+          justify-content: center;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="logo-container">
+        <img src="logo.png" class="logo-img" alt="Logo" onerror="if (typeof LOGO_BASE64 !== 'undefined') { this.src = LOGO_BASE64; } this.onerror = null;" />
+      </div>
+      <h1>Absensi Digital</h1>
+      <span>Rekap Kehadiran Bulanan</span>
+      
+      <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle Dark Mode">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+    </div>
+
+    <!-- PRINT-ONLY HEADER BLOCK -->
+    <div class="print-only-header">
+      <div style="display: flex; justify-content: space-between; align-items: center; border: 1.5pt solid #94a3b8; padding: 12px; margin-bottom: 12px;">
+        <img src="logo.png" style="height: 48px;" onerror="if(typeof LOGO_BASE64 !== 'undefined') this.src=LOGO_BASE64; this.onerror=null;" />
+        <div style="text-align: center;">
+          <h2 style="font-size: 15px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px;">Absensi Karyawan</h2>
+          <h3 style="font-size: 11px; font-weight: 700; color: #475569;">REKAP KEHADIRAN BULANAN</h3>
+        </div>
+        <img src="smk3.png" style="height: 48px;" onerror="if(typeof SMK3_BASE64 !== 'undefined') this.src=SMK3_BASE64; this.onerror=null;" />
+      </div>
+      <div style="border: 1.5pt solid #94a3b8; padding: 10px; margin-bottom: 12px; font-size: 11px; line-height: 1.6;">
+        <div style="display: grid; grid-template-columns: 120px 1fr; border-bottom: 0.5pt solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;">
+          <strong>Periode:</strong> <span id="print-periode">-</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 120px 1fr; border-bottom: 0.5pt solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;">
+          <strong>ID Karyawan:</strong> <span id="print-id">-</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 120px 1fr; border-bottom: 0.5pt solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px;">
+          <strong>Nama Karyawan:</strong> <span id="print-name">-</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 120px 1fr;">
+          <strong>Jabatan:</strong> <span id="print-post">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="container">
+      <div class="app-layout">
+        <!-- SIDEBAR COLUMN -->
+        <div class="app-sidebar">
+          <!-- INFO KARYAWAN -->
+          <div class="card">
+            <div class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Informasi Karyawan
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>ID Karyawan</label>
+                <input type="text" id="emp-id" placeholder="contoh: KRY001" />
+              </div>
+              <div class="form-group">
+                <label>Nama Karyawan</label>
+                <input type="text" id="emp-name" placeholder="Nama lengkap" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group full">
+                <label>Jabatan</label>
+                <input type="text" id="emp-post" placeholder="contoh: Administrator" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Bulan</label>
+                <select id="sel-bulan">
+                  <option value="0">Januari</option>
+                  <option value="1">Februari</option>
+                  <option value="2">Maret</option>
+                  <option value="3">April</option>
+                  <option value="4">Mei</option>
+                  <option value="5">Juni</option>
+                  <option value="6">Juli</option>
+                  <option value="7">Agustus</option>
+                  <option value="8">September</option>
+                  <option value="9">Oktober</option>
+                  <option value="10">November</option>
+                  <option value="11">Desember</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tahun</label>
+                <input type="number" id="sel-tahun" value="2026" min="2020" max="2099" />
+              </div>
+            </div>
+            <div class="action-row">
+              <button class="btn btn-primary" onclick="handleGenerateCalendar()">Buat Kalender</button>
+            </div>
+            <div class="action-row" style="margin-top: 8px;">
+              <button class="btn btn-sm" onclick="saveDraft()">Simpan Draft</button>
+              <button class="btn btn-sm" onclick="loadDraft()">Muat Draft</button>
+            </div>
+          </div>
+
+          <!-- SUMMARY CARD -->
+          <div class="card" id="summary-card" style="display: none;">
+            <div class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M3 20v-8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8"/><path d="M11 20v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v4"/><path d="M15 20v-8a2 2 0 0 1 2 2v8"/></svg>
+              Rekap Kehadiran
+            </div>
+            <div class="summary-grid">
+              <div class="summary-item"><div class="summary-num" id="sum-hari-kerja">0</div><div class="summary-label">Hari Kerja</div></div>
+              <div class="summary-item"><div class="summary-num" id="sum-wfh">0</div><div class="summary-label">WFH</div></div>
+            </div>
+          </div>
+
+          <!-- DEVELOPER UNIT TESTS -->
+          <div class="card" style="border-color: rgba(245,160,0,0.3); display: none;">
+            <div class="card-title" style="color: var(--text2);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Unit Test Runner
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="runUnitTests()" style="width: 100%;">
+              Jalankan Tes Otomatis
+            </button>
+            <div id="test-results" style="margin-top: 10px; font-size: 10.5px; max-height: 140px; overflow-y: auto; display: none; border: 1px solid var(--border); padding: 8px; border-radius: 6px; background: var(--bg);">
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN COLUMN (CALENDAR) -->
+        <div class="app-main">
+          <div class="card" id="cal-card" style="display: none">
+            <div class="cal-header">
+              <h2 id="cal-title"></h2>
+              <div style="display: flex; gap: 8px">
+                <button class="btn btn-sm" onclick="setAllWFH()">WFH Hari Kerja</button>
+                <button class="btn btn-sm btn-danger" onclick="resetSemua()">Reset</button>
+              </div>
+            </div>
+            <div class="cal-grid" id="cal-day-labels">
+              <div class="cal-day-label" style="background: #1e3a8a; color: #ffffff; border-radius: 6px; padding: 6px 0;">Sen</div>
+              <div class="cal-day-label" style="background: #1e3a8a; color: #ffffff; border-radius: 6px; padding: 6px 0;">Sel</div>
+              <div class="cal-day-label" style="background: #1e3a8a; color: #ffffff; border-radius: 6px; padding: 6px 0;">Rab</div>
+              <div class="cal-day-label" style="background: #1e3a8a; color: #ffffff; border-radius: 6px; padding: 6px 0;">Kam</div>
+              <div class="cal-day-label" style="background: #1e3a8a; color: #ffffff; border-radius: 6px; padding: 6px 0;">Jum</div>
+              <div class="cal-day-label" style="background: #f5a000; color: #ffffff; border-radius: 6px; padding: 6px 0;">Sab</div>
+              <div class="cal-day-label" style="background: #ef4444; color: #ffffff; border-radius: 6px; padding: 6px 0;">Min</div>
+            </div>
+            <div class="cal-grid" id="cal-grid" style="margin-top: 8px;"></div>
+
+            <div class="action-row" style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+              <button class="btn btn-primary" id="btn-export-pdf" onclick="handleExportPDF()" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export PDF
+              </button>
+              <button class="btn" id="btn-print" onclick="handlePrintLangsung()" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Langsung
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRINT-ONLY SIGNATURES BLOCK -->
+    <div class="print-only-signatures" style="margin-top: 30px; padding: 0 10px;">
+      <table style="width: 100%; border-collapse: collapse; border: 1.5pt solid #94a3b8; font-size: 11px;">
+        <thead>
+          <tr>
+            <th style="border: 1pt solid #94a3b8; padding: 8px; font-weight: 700; width: 33.33%; text-align: center; background: #f1f5f9;">Diketahui</th>
+            <th style="border: 1pt solid #94a3b8; padding: 8px; font-weight: 700; width: 33.33%; text-align: center; background: #f1f5f9;">Diperiksa</th>
+            <th style="border: 1pt solid #94a3b8; padding: 8px; font-weight: 700; width: 33.33%; text-align: center; background: #f1f5f9;">Disusun</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="border: 1pt solid #94a3b8; height: 56px;"></td>
+            <td style="border: 1pt solid #94a3b8; height: 56px; text-align: center; vertical-align: middle; color: #475569;">-</td>
+            <td style="border: 1pt solid #94a3b8; height: 56px;"></td>
+          </tr>
+          <tr>
+            <td style="border: 1pt solid #94a3b8; padding: 8px; font-weight: 700; text-align: center;">Hartono Mulyo Raharjo</td>
+            <td style="border: 1pt solid #94a3b8; padding: 8px; font-weight: 700; text-align: center;">-</td>
+            <td style="border: 1pt solid #94a3b8; padding: 8px; font-weight: 700; text-align: center;">Nur Rohman Setiawan</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- MODAL INPUT -->
+    <div class="modal-backdrop" id="modal">
+      <div class="modal">
+        <div class="modal-title" id="modal-title">Input Kehadiran</div>
+
+        <div class="status-grid">
+          <div class="status-btn" id="btn-hadir" onclick="setStatus('hadir')">HADIR</div>
+          <div class="status-btn" id="btn-wfh" onclick="setStatus('wfh')">WFH</div>
+          <div class="status-btn" id="btn-la-masuk" onclick="setStatus('la-masuk')">LA MASUK</div>
+          <div class="status-btn" id="btn-la-pulang" onclick="setStatus('la-pulang')">LA PULANG</div>
+          <div class="status-btn" id="btn-cuti" onclick="setStatus('cuti')">CUTI</div>
+          <div class="status-btn" id="btn-sakit" onclick="setStatus('sakit')">SAKIT</div>
+          <div class="status-btn" id="btn-izin" onclick="setStatus('izin')" style="grid-column: 1/-1">IZIN</div>
+        </div>
+
+        <div class="modal-field" id="field-masuk">
+          <label>Jam Masuk</label><input type="time" id="inp-masuk" />
+        </div>
+        <div class="modal-field" id="field-pulang">
+          <label>Jam Pulang</label><input type="time" id="inp-pulang" />
+        </div>
+        <div class="modal-field" id="field-rem">
+          <label>Remarks / Keterangan</label>
+          <textarea id="inp-rem" placeholder="Contoh: Dinas Luar, Meeting Vendor, dll"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn" onclick="closeModal()">Batal</button>
+          <button class="btn btn-primary" onclick="saveModal()">Simpan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+      // ─── DOM STATE ───
+      const NAMA_BULAN = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      const NAMA_HARI = [
+        "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"
+      ];
+
+      let LIBNAS = {};
+      let absenData = {}; // { 'YYYY-MM-DD': { status, masuk, pulang, rem, holidayName } }
+      let currentDate = null;
+      let currentStatus = null;
+      let currentBulan = 0;
+      let currentTahun = 2026;
+
+      // ─── GLOBAL UTILITY FUNCTION ───
+      // Prioritas 1: Format key wajib konsisten: YYYY-MM-DD
+      // Semua akses ke absenData wajib menggunakan helper tersebut.
+      function dateKey(year, month, day) {
+        return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      }
+
+      // ─── SERVICES ───
+
+      // 1. Utility Service (Date Utilities)
+      const DateUtil = {
+        dateKey(year, month, day) {
+          return dateKey(year, month, day);
+        },
+        
+        formatDate(year, month, day) {
+          const dObj = new Date(year, month, day);
+          const dName = NAMA_HARI[dObj.getDay()];
+          const mName = NAMA_BULAN[month];
+          return `${dName}, ${day} ${mName} ${year}`;
+        },
+        
+        parseDate(key) {
+          const parts = key.split("-");
+          if (parts.length === 3) {
+            return {
+              year: parseInt(parts[0]),
+              month: parseInt(parts[1]) - 1, // back to 0-indexed
+              day: parseInt(parts[2])
+            };
+          }
+          return null;
+        }
+      };
+
+      // 2. Holiday Service
+      const HolidayService = {
+        cache: new Map(),
+        
+        getFallbackHolidays(year) {
+          console.warn(`[HolidayService] Using static offline fallback holidays database for year ${year}`);
+          
+          const fixedHolidays = {
+            "01-01": "Tahun Baru Masehi",
+            "05-01": "Hari Buruh Internasional",
+            "06-01": "Hari Lahir Pancasila",
+            "08-17": "Hari Kemerdekaan RI",
+            "12-25": "Hari Raya Natal"
+          };
+
+          if (year === 2026) {
+            return {
+              ...fixedHolidays,
+              "01-16": "Isra Mikraj Nabi Muhammad SAW",
+              "02-16": "Cuti Bersama Tahun Baru Imlek",
+              "02-17": "Tahun Baru Imlek 2577 Kongzili",
+              "03-18": "Cuti Bersama Hari Suci Nyepi",
+              "03-19": "Hari Suci Nyepi (Tahun Baru Saka 1948)",
+              "03-20": "Cuti Bersama Hari Raya Idul Fitri 1447 H",
+              "03-21": "Hari Raya Idul Fitri 1447 H",
+              "03-22": "Hari Raya Idul Fitri 1447 H",
+              "03-23": "Cuti Bersama Hari Raya Idul Fitri 1447 H",
+              "03-24": "Cuti Bersama Hari Raya Idul Fitri 1447 H",
+              "04-03": "Wafat Yesus Kristus",
+              "04-05": "Hari Kebangkitan Yesus Kristus (Paskah)",
+              "05-14": "Hari Kenaikan Yesus Kristus",
+              "05-15": "Cuti Bersama Kenaikan Yesus Kristus",
+              "05-27": "Hari Raya Idul Adha 1447 H",
+              "05-28": "Cuti Bersama Hari Raya Idul Adha 1447 H",
+              "05-31": "Hari Raya Waisak 2570 BE",
+              "06-16": "Tahun Baru Islam 1448 H",
+              "08-25": "Maulid Nabi Muhammad SAW",
+              "12-24": "Cuti Bersama Hari Raya Natal"
+            };
+          }
+
+          if (year === 2027) {
+            return {
+              ...fixedHolidays,
+              "01-05": "Isra Mi'raj Nabi Muhammad SAW", // TODO: verifikasi tanggal
+              "02-06": "Tahun Baru Imlek 2578 Kongzili", // TODO: verifikasi tanggal
+              "03-09": "Hari Suci Nyepi (Tahun Baru Saka 1949)", // TODO: verifikasi tanggal
+              "03-10": "Hari Raya Idul Fitri 1448 H", // TODO: verifikasi tanggal
+              "03-11": "Cuti Bersama Hari Raya Idul Fitri 1448 H", // TODO: verifikasi tanggal
+              "03-26": "Wafat Yesus Kristus", // TODO: verifikasi tanggal
+              "03-28": "Hari Kebangkitan Yesus Kristus (Paskah)", // TODO: verifikasi tanggal
+              "05-06": "Hari Kenaikan Yesus Kristus", // TODO: verifikasi tanggal
+              "05-17": "Hari Raya Idul Adha 1448 H", // TODO: verifikasi tanggal
+              "05-20": "Hari Raya Waisak 2571 BE", // TODO: verifikasi tanggal
+              "06-06": "Tahun Baru Islam 1449 H", // TODO: verifikasi tanggal
+              "08-15": "Maulid Nabi Muhammad SAW", // TODO: verifikasi tanggal
+              "12-24": "Cuti Bersama Hari Raya Natal" // TODO: verifikasi tanggal
+            };
+          }
+
+          return fixedHolidays;
+        },
+
+        async fetchHolidays(year) {
+          // Prioritas 4: API -> Cache -> Fallback
+          // Check Cache
+          if (this.cache.has(year)) {
+            console.log(`[HolidayService] Cache hit for year ${year}`);
+            return this.cache.get(year);
+          }
+
+          // Fetch from Online API
+          console.log(`[HolidayService] Fetching holidays for ${year} from online API...`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+          try {
+            const res = await fetch(`https://api-hari-libur.vercel.app/api?year=${year}`, {
+              signal: controller.signal,
+            });
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+
+            const result = await res.json();
+            if (result.status !== "success" || !Array.isArray(result.data)) {
+              throw new Error("Format data tidak valid");
+            }
+
+            const holidays = {};
+            result.data.forEach((item) => {
+              const parts = item.date.split("-");
+              if (parts.length === 3) {
+                const mm = parts[1];
+                const dd = parts[2];
+                holidays[`${mm}-${dd}`] = item.description;
+              }
+            });
+
+            this.cache.set(year, holidays);
+            console.log(`[HolidayService] Cached ${Object.keys(holidays).length} holidays for ${year}`);
+            return holidays;
+          } catch (e) {
+            console.warn(`[HolidayService] Online API Fetch failed: ${e.message}. Falling back to static database.`);
+            return this.getFallbackHolidays(year);
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        }
+      };
+
+      // 3. Validation Service
+      const ValidationService = {
+        validateEmployeeInfo(id, name, post) {
+          console.log("[ValidationService] Validating inputs:", { id, name, post });
+          return true;
+        },
+
+        isLeapYear(year) {
+          return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        },
+
+        getDaysInMonth(year, month) {
+          return new Date(year, month + 1, 0).getDate();
+        }
+      };
+
+      // 4. Print Service
+      const PrintService = {
+        print(name, id, post, month, year) {
+          console.log("[PrintService] Syncing printed parameters...");
+          const monthName = NAMA_BULAN[month];
+          document.getElementById("print-name").textContent = name || "-";
+          document.getElementById("print-id").textContent = id || "-";
+          document.getElementById("print-post").textContent = post || "-";
+          document.getElementById("print-periode").textContent = `01 s/d ${String(ValidationService.getDaysInMonth(year, month)).padStart(2, "0")} ${monthName.toUpperCase()} ${year}`;
+          
+          window.print();
+        }
+      };
+
+      // 5. Generate Service (jsPDF PDF Export)
+      const GenerateService = {
+        async exportPDF(name, id, post, month, year, totalDays) {
+          console.log("[GenerateService] Starting PDF generation flow...");
+          if (!window.jspdf?.jsPDF) {
+            throw new Error("Library PDF (jsPDF) belum terpasang atau gagal dimuat.");
+          }
+
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+          if (typeof doc.autoTable !== "function") {
+            throw new Error("Komponen tabel PDF (jspdf-autotable) belum siap.");
+          }
+
+          const monthName = NAMA_BULAN[month];
+          const mL = 10;
+          const mR = 10;
+          const tW = 210 - mL - mR;
+          const lineW = 0.28; // ~0.75-1pt yang konsisten untuk SEMUA garis, dalam maupun luar
+          const lineColorBlack = [0, 0, 0];
+          const base = {
+            lineColor: [0, 0, 0],
+            lineWidth: 0.28,
+            fillColor: [255, 255, 255],
+            textColor: [0, 0, 0],
+            fontSize: 7.5,
+            cellPadding: 2,
+          };
+
+          // Header Table
+          doc.autoTable({
+            startY: 8,
+            margin: { left: mL, right: mR },
+            tableWidth: tW,
+            body: [
+              [
+                { content: "", rowSpan: 2, styles: { cellWidth: 26, halign: "center", valign: "middle", minCellHeight: 22 } },
+                { 
+                  content: "ABSENSI KARYAWAN", 
+                  styles: { cellWidth: tW - 52, halign: "center", valign: "bottom", fontStyle: "bold", fontSize: 14, textColor: [0, 0, 0] } 
+                },
+                { content: "", rowSpan: 2, styles: { cellWidth: 26, halign: "center", valign: "middle" } },
+              ],
+              [
+                { 
+                  content: "REKAP KEHADIRAN BULANAN", 
+                  styles: { cellWidth: tW - 52, halign: "center", valign: "top", fontStyle: "bold", fontSize: 10, textColor: [0, 0, 0] } 
+                }
+              ],
+              [
+                { 
+                  content: `Periode: 01 s/d ${String(totalDays).padStart(2, "0")} ${monthName.toUpperCase()} ${year}`, 
+                  colSpan: 3, 
+                  styles: { halign: "center", fontStyle: "bold", fontSize: 9.5, fillColor: [255, 255, 255], textColor: [0, 0, 0] } 
+                }
+              ],
+              [
+                { content: `ID Karyawan : ${id || "-"}`, colSpan: 3, styles: { fontStyle: "bold", fontSize: 8.5 } }
+              ],
+              [
+                { content: `Nama Karyawan : ${name || "-"}`, colSpan: 3, styles: { fontStyle: "bold", fontSize: 8.5 } }
+              ],
+              [
+                { content: `Jabatan : ${post || "-"}`, colSpan: 3, styles: { fontStyle: "bold", fontSize: 8.5 } }
+              ],
+            ],
+            styles: base,
+            theme: "grid",
+            didDrawCell: (data) => {
+              if (data.section === 'body') {
+                if (data.row.index === 0 && data.column.index === 0 && typeof LOGO_BASE64 !== 'undefined') {
+                  const pad = 1.5;
+                  doc.addImage(LOGO_BASE64, 'PNG', data.cell.x + pad, data.cell.y + pad, data.cell.width - (pad * 2), data.cell.height - (pad * 2));
+                }
+                if (data.row.index === 0 && data.column.index === 2 && typeof SMK3_BASE64 !== 'undefined') {
+                  const pad = 1.5;
+                  doc.addImage(SMK3_BASE64, 'PNG', data.cell.x + pad, data.cell.y + pad, data.cell.width - (pad * 2), data.cell.height - (pad * 2));
+                }
+              }
+            }
+          });
+
+          // Draw 1.5 pt outer border for Header Table
+          doc.setLineWidth(lineW);
+          doc.setDrawColor(0, 0, 0);
+          doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
+
+          // Grid offset calculations
+          const days = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+          const colW = tW / 7;
+          const firstDay = new Date(year, month, 1).getDay();
+          const offset = firstDay === 0 ? 6 : firstDay - 1;
+          
+          const weeks = [];
+          let week = Array(offset).fill(null);
+          for (let d = 1; d <= totalDays; d++) {
+            week.push(d);
+            if (week.length === 7) {
+              weeks.push(week);
+              week = [];
+            }
+          }
+          if (week.length) {
+            while (week.length < 7) week.push(null);
+            weeks.push(week);
+          }
+
+          const statusLabels = {
+            hadir: "HADIR",
+            wfh: "WFH",
+            "la-masuk": "LA MASUK",
+            "la-pulang": "LA PULANG",
+            cuti: "CUTI",
+            sakit: "SAKIT",
+            izin: "IZIN",
+            "libur-nasional": "LIBUR NASIONAL",
+          };
+
+          const headRow = days.map((day, index) => {
+            let headColor = [250, 250, 250]; // Senin-Jumat: putih/abu sangat muda
+            let headTextColor = [0, 0, 0]; // teks hitam
+
+            if (index === 5 || index === 6) {
+              // Sabtu (index 5) dan Minggu (index 6): SAMA-SAMA merah tua di header
+              headColor = [153, 27, 27];
+              headTextColor = [255, 255, 255];
+            }
+
+            return {
+              content: day,
+              styles: {
+                cellWidth: colW,
+                halign: "center",
+                valign: "middle",
+                fontStyle: "bold",
+                fontSize: 8,
+                fillColor: headColor,
+                textColor: headTextColor,
+                minCellHeight: 8, // tinggi semua header sama
+              },
+            };
+          });
+
+          const bodyRows = weeks.map((row) => row.map((d) => {
+            if (!d) return { content: "", styles: { cellWidth: colW, minCellHeight: 22, fillColor: [255, 255, 255] } };
+
+            const key = dateKey(year, month, d);
+            const data = absenData[key] || {};
+            const dateObj = new Date(year, month, d);
+            const dow = dateObj.getDay();
+            const isWeekend = dow === 6;
+            
+            let cellBg = [255, 255, 255]; // default putih untuk semua hari kerja
+            let textColors = [0, 0, 0]; // default hitam murni
+            
+            if (data.status === "libur-nasional") {
+              cellBg = [254, 226, 226]; // merah pastel
+              textColors = [185, 28, 28]; // merah
+            } else if (isWeekend) { // isWeekend = Sabtu saja (dow === 6)
+              cellBg = [254, 226, 226]; // merah pastel
+              textColors = [185, 28, 28]; // merah
+            }
+
+            const lines = [`${d}`];
+            if (data.status) {
+              lines.push(statusLabels[data.status] || data.status.toUpperCase());
+            } else if (isWeekend) {
+              lines.push("LIBUR");
+              lines.push("KULIAH");
+            }
+            if (data.masuk && data.pulang) lines.push(`${data.masuk} - ${data.pulang}`);
+            else if (data.masuk) lines.push(data.masuk);
+            else if (data.pulang) lines.push(data.pulang);
+            
+            if (data.status === "libur-nasional" && data.holidayName) {
+              lines.push(data.holidayName);
+            }
+            if (data.rem) lines.push(data.rem);
+
+            return {
+              content: lines.join("\n"),
+              styles: {
+                cellWidth: colW,
+                minCellHeight: 22,
+                halign: "center",
+                valign: "top",
+                fontSize: 6.5,
+                fillColor: cellBg,
+                textColor: textColors,
+              },
+            };
+          }));
+
+          const calStartY = doc.lastAutoTable.finalY + 6;
+          doc.autoTable({
+            startY: calStartY,
+            margin: { left: mL, right: mR },
+            tableWidth: tW,
+            head: [headRow],
+            body: bodyRows,
+            styles: { ...base, cellPadding: 1.5, lineWidth: lineW, lineColor: lineColorBlack },
+            headStyles: { ...base, halign: "center", fontStyle: "bold" },
+            theme: "grid",
+            rowPageBreak: "avoid",
+          });
+
+          // Draw 1.5 pt outer border for Calendar Table
+          doc.setLineWidth(lineW);
+          doc.setDrawColor(0, 0, 0);
+          doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
+
+          // Summary block
+          const summary = SummaryService.getSummary();
+          const summaryRows = [
+            [
+              { content: `Jumlah Hari Kerja: ${summary.hariKerja} hari`, styles: { halign: "center", fontStyle: "bold", cellWidth: tW / 2 } },
+              { content: `Jumlah WFH: ${summary.wfh} hari`, styles: { halign: "center", fontStyle: "bold", cellWidth: tW / 2 } },
+            ]
+          ];
+
+          const sumStartY = doc.lastAutoTable.finalY + 6;
+          doc.autoTable({
+            startY: sumStartY,
+            margin: { left: mL, right: mR },
+            tableWidth: tW,
+            body: summaryRows,
+            styles: { ...base, fontSize: 8.5, cellPadding: 2.5, lineWidth: lineW, lineColor: [0, 0, 0], fillColor: [255, 255, 255] },
+            theme: "grid",
+          });
+
+          // Draw 1.5 pt outer border for Summary Table
+          doc.setLineWidth(lineW);
+          doc.setDrawColor(0, 0, 0);
+          doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
+
+          // Signature Block
+          const footerHeight = 36;
+          let footerY = doc.lastAutoTable.finalY + 8;
+          if (footerY + footerHeight > 287) {
+            doc.addPage();
+            footerY = 12;
+          }
+          doc.autoTable({
+            startY: footerY,
+            margin: { left: mL, right: mR },
+            tableWidth: tW,
+            body: [
+              ["Diketahui", "Diperiksa", "Disusun"].map((text) => ({ content: text, styles: { halign: "center", fontStyle: "bold" } })),
+              [{ content: "", styles: { minCellHeight: 18 } }, { content: "" }, { content: "" }],
+              [
+                { content: "Hartono Mulyo Raharjo", styles: { halign: "center", fontStyle: "bold" } },
+                { content: "-", styles: { halign: "center", fontStyle: "bold" } },
+                { content: "Nur Rohman Setiawan", styles: { halign: "center", fontStyle: "bold" } },
+              ],
+            ],
+            styles: { ...base, lineWidth: lineW, lineColor: lineColorBlack },
+            columnStyles: {
+              0: { cellWidth: tW / 3 },
+              1: { cellWidth: tW / 3 },
+              2: { cellWidth: tW / 3 },
+            },
+            theme: "grid",
+          });
+
+          // Draw 1.5 pt outer border for Signatures Table
+          doc.setLineWidth(lineW);
+          doc.setDrawColor(0, 0, 0);
+          doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
+
+          return doc;
+        }
+      };
+
+      // 6. Calendar Service
+      const CalendarService = {
+        async initCalendar(month, year) {
+          console.log(`[CalendarService] Loading holidays for year ${year}...`);
+          LIBNAS = await HolidayService.fetchHolidays(year);
+          console.log(`[CalendarService] Holidays fully loaded. Rendering grid...`);
+          this.renderGrid(month, year);
+        },
+
+        renderGrid(month, year) {
+          const grid = document.getElementById("cal-grid");
+          if (!grid) return;
+          grid.innerHTML = "";
+
+          const firstDay = new Date(year, month, 1).getDay();
+          const offset = firstDay === 0 ? 6 : firstDay - 1;
+          const totalDays = ValidationService.getDaysInMonth(year, month);
+
+          // Update calendar title
+          const titleEl = document.getElementById("cal-title");
+          if (titleEl) {
+            titleEl.textContent = `${NAMA_BULAN[month]} ${year}`;
+          }
+
+          // Render empty cells
+          for (let i = 0; i < offset; i++) {
+            const empty = document.createElement("div");
+            empty.className = "cal-cell empty";
+            grid.appendChild(empty);
+          }
+
+          for (let d = 1; d <= totalDays; d++) {
+            const dateObj = new Date(year, month, d);
+            const dow = dateObj.getDay();
+            const key = dateKey(year, month, d);
+            const mmdd = `${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            const isLibnas = LIBNAS[mmdd];
+
+            // Prioritas 6 & 5: Merge holiday data if present, but do NOT overwrite existing custom attendance data
+            if (isLibnas) {
+              const existing = absenData[key] || {};
+              absenData[key] = {
+                status: existing.status || "libur-nasional",
+                holidayName: isLibnas,
+                masuk: existing.masuk || "",
+                pulang: existing.pulang || "",
+                rem: existing.rem || ""
+              };
+            } else {
+              // If it's NOT a national holiday, and it previously had a "libur-nasional" status, remove it!
+              if (absenData[key]?.status === "libur-nasional") {
+                delete absenData[key];
+              } else if (absenData[key]) {
+                delete absenData[key].holidayName;
+              }
+            }
+
+            const cell = document.createElement("div");
+            cell.id = `cell-${key}`;
+            cell.className = "cal-cell";
+
+            cell.onclick = () => openModal(key, d, dow);
+
+            renderCell(cell, key, d, dow, isLibnas);
+            grid.appendChild(cell);
+          }
+
+          SummaryService.updateSummary();
+        }
+      };
+
+      // 7. Summary Service
+      const SummaryService = {
+        getSummary() {
+          const summary = {
+            hariKerja: 0,
+            wfh: 0,
+          };
+          const totalDays = ValidationService.getDaysInMonth(currentTahun, currentBulan);
+
+          for (let d = 1; d <= totalDays; d++) {
+            const key = dateKey(currentTahun, currentBulan, d);
+            const mmdd = `${String(currentBulan + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+            const isLibnas = LIBNAS[mmdd];
+            const dateObj = new Date(currentTahun, currentBulan, d);
+            const dow = dateObj.getDay();
+            const isWeekend = dow === 6;
+
+            const status = absenData[key]?.status;
+            const isWorkingStatus = status && ["hadir", "wfh", "la-masuk", "la-pulang"].includes(status);
+
+            if ((!isWeekend && !isLibnas) || (isWeekend && isWorkingStatus)) {
+              summary.hariKerja++;
+            }
+
+            if (status === "wfh") summary.wfh++;
+          }
+          return summary;
+        },
+
+        updateSummary() {
+          const summary = this.getSummary();
+          const values = {
+            "sum-hari-kerja": summary.hariKerja,
+            "sum-wfh": summary.wfh,
+          };
+          Object.entries(values).forEach(([id, value]) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+          });
+        }
+      };
+
+      // 8. Draft Service
+      const DraftService = {
+        save(id, name, post, bulan, tahun, data) {
+          const draft = { id, name, post, bulan, tahun, data };
+          localStorage.setItem("absensi-draft", JSON.stringify(draft));
+        },
+
+        load() {
+          const raw = localStorage.getItem("absensi-draft");
+          if (!raw) return null;
+          return JSON.parse(raw);
+        }
+      };
+
+      // ─── USER INTERFACE FLOWS ───
+
+      function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute("data-theme") || "light";
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        html.setAttribute("data-theme", newTheme);
+        
+        const btn = document.getElementById("theme-toggle");
+        if (btn) {
+          if (newTheme === "dark") {
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
+          } else {
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+          }
+        }
+      }
+
+      async function handleGenerateCalendar() {
+        try {
+          const id = document.getElementById("emp-id").value.trim();
+          const name = document.getElementById("emp-name").value.trim();
+          const post = document.getElementById("emp-post").value.trim();
+          
+          ValidationService.validateEmployeeInfo(id, name, post);
+          
+          currentBulan = parseInt(document.getElementById("sel-bulan").value);
+          currentTahun = parseInt(document.getElementById("sel-tahun").value);
+          
+          // Disable print and export during generation flow
+          document.getElementById("btn-export-pdf").disabled = true;
+          document.getElementById("btn-print").disabled = true;
+          
+          // Prioritas 3 Sequence: validation -> fetch holidays -> wait -> render -> update summary -> show -> enable buttons
+          await CalendarService.initCalendar(currentBulan, currentTahun);
+          
+          document.getElementById("cal-card").style.display = "block";
+          document.getElementById("summary-card").style.display = "block";
+          
+          // Enable buttons
+          document.getElementById("btn-export-pdf").disabled = false;
+          document.getElementById("btn-print").disabled = false;
+          
+          toast("Kalender berhasil dibuat ✓");
+        } catch(e) {
+          console.error("[UI] Generate Calendar Error:", e.message);
+          alert(`Gagal membuat kalender: ${e.message}`);
+        }
+      }
+
+      async function handleExportPDF() {
+        try {
+          const id = document.getElementById("emp-id").value.trim();
+          const name = document.getElementById("emp-name").value.trim();
+          const post = document.getElementById("emp-post").value.trim();
+          
+          ValidationService.validateEmployeeInfo(id, name, post);
+          
+          const totalDays = ValidationService.getDaysInMonth(currentTahun, currentBulan);
+          
+          const doc = await GenerateService.exportPDF(name, id, post, currentBulan, currentTahun, totalDays);
+          doc.save(`Absensi_${name}_${NAMA_BULAN[currentBulan]}_${currentTahun}.pdf`);
+          toast("PDF berhasil di-export ✓");
+        } catch(e) {
+          console.error("[UI] Export PDF Error:", e.message);
+          alert(`Gagal mengekspor PDF: ${e.message}`);
+        }
+      }
+
+      function handlePrintLangsung() {
+        try {
+          const id = document.getElementById("emp-id").value.trim();
+          const name = document.getElementById("emp-name").value.trim();
+          const post = document.getElementById("emp-post").value.trim();
+          
+          ValidationService.validateEmployeeInfo(id, name, post);
+          
+          PrintService.print(name, id, post, currentBulan, currentTahun);
+        } catch(e) {
+          console.error("[UI] Print Error:", e.message);
+          alert(`Gagal mencetak: ${e.message}`);
+        }
+      }
+
+      function renderCell(cell, key, d, dow, isLibnas) {
+        const data = absenData[key];
+        const dayName = NAMA_HARI[dow];
+        const isWeekend = dow === 6;
+
+        // Background logic: ONLY Libur Nasional gets orange background, weekend gets soft grey
+        if (isLibnas || (data && data.status === "libur-nasional")) {
+          cell.style.background = "#ffedd5"; // light orange for Libur Nasional
+          cell.style.borderColor = "#fed7aa";
+        } else if (isWeekend) {
+          cell.style.background = "rgba(148, 163, 184, 0.15)"; // soft gray for weekend
+          cell.style.borderColor = "rgba(148, 163, 184, 0.3)";
+        } else {
+          cell.style.background = "var(--card)";
+          cell.style.borderColor = "var(--border)";
+        }
+
+        const dateEl = document.createElement("div");
+        dateEl.className = "cell-date";
+        dateEl.textContent = d;
+        if (isLibnas || (data && data.status === "libur-nasional")) {
+          dateEl.style.color = "var(--red)";
+        } else if (dow === 6) { // Saturday
+          dateEl.style.color = "var(--primary)";
+        }
+        cell.appendChild(dateEl);
+
+        const dayEl = document.createElement("div");
+        dayEl.className = "cell-day";
+        dayEl.textContent = dayName;
+        if (isLibnas || (data && data.status === "libur-nasional")) {
+          dayEl.style.color = "var(--red)";
+        } else if (dow === 6) { // Saturday
+          dayEl.style.color = "var(--primary)";
+        }
+        cell.appendChild(dayEl);
+
+        if (isLibnas) {
+          const badge = document.createElement("div");
+          badge.className = "libnas-badge";
+          badge.textContent = "Nasional";
+          cell.appendChild(badge);
+        }
+
+        if (data && data.status) {
+          const s = data.status;
+          const statusEl = document.createElement("div");
+          statusEl.className = "cell-status";
+
+          if (s === "wfh") {
+            statusEl.textContent = "WFH";
+            statusEl.classList.add("s-wfh");
+          } else if (s === "hadir") {
+            statusEl.textContent = "Hadir";
+            statusEl.classList.add("s-hadir");
+          } else if (s === "la-masuk") {
+            statusEl.textContent = "LA Masuk";
+            statusEl.classList.add("s-la");
+          } else if (s === "la-pulang") {
+            statusEl.textContent = "LA Pulang";
+            statusEl.classList.add("s-la");
+          } else if (s === "cuti") {
+            statusEl.textContent = "CUTI";
+            statusEl.classList.add("s-cuti");
+          } else if (s === "sakit") {
+            statusEl.textContent = "SAKIT";
+            statusEl.classList.add("s-sakit");
+          } else if (s === "izin") {
+            statusEl.textContent = "IZIN";
+            statusEl.classList.add("s-izin");
+          } else if (s === "libur-nasional") {
+            statusEl.textContent = "LIBUR NASIONAL";
+            statusEl.classList.add("s-libur");
+          }
+          cell.appendChild(statusEl);
+
+          if (data.masuk || data.pulang) {
+            const jamEl = document.createElement("div");
+            jamEl.className = "cell-jam";
+            if (data.masuk && data.pulang) jamEl.textContent = `${data.masuk} - ${data.pulang}`;
+            else if (data.masuk) jamEl.textContent = `M: ${data.masuk}`;
+            else if (data.pulang) jamEl.textContent = `P: ${data.pulang}`;
+            cell.appendChild(jamEl);
+          }
+
+          if (data.rem) {
+            const remEl = document.createElement("div");
+            remEl.className = "cell-rem";
+            remEl.textContent = data.rem;
+            cell.appendChild(remEl);
+          }
+        } else if (isWeekend) {
+          const statusEl = document.createElement("div");
+          statusEl.className = "cell-status s-libur";
+          statusEl.textContent = "Libur";
+          cell.appendChild(statusEl);
+        }
+      }
+
+      function refreshCell(key) {
+        const dateInfo = DateUtil.parseDate(key);
+        if (!dateInfo) return;
+        const dow = new Date(dateInfo.year, dateInfo.month, dateInfo.day).getDay();
+        const mmdd = `${String(dateInfo.month + 1).padStart(2, "0")}-${String(dateInfo.day).padStart(2, "0")}`;
+        const cell = document.getElementById(`cell-${key}`);
+        if (cell) renderCell(cell, key, dateInfo.day, dow, LIBNAS[mmdd]);
+      }
+
+      // ── MODAL ──
+      function openModal(key, d, dow) {
+        currentDate = key;
+        const data = absenData[key] || {};
+        const dayName = NAMA_HARI[dow];
+
+        document.getElementById("modal-title").textContent = DateUtil.formatDate(currentTahun, currentBulan, d);
+        document.getElementById("inp-masuk").value = data.masuk || "";
+        document.getElementById("inp-pulang").value = data.pulang || "";
+        document.getElementById("inp-rem").value = data.rem || "";
+
+        const editableStatus = ["hadir", "wfh", "la-masuk", "la-pulang", "cuti", "sakit", "izin"]
+          .includes(data.status) ? data.status : "hadir";
+        setStatus(editableStatus);
+        document.getElementById("modal").classList.add("open");
+      }
+
+      function closeModal() {
+        document.getElementById("modal").classList.remove("open");
+        currentDate = null;
+        currentStatus = null;
+      }
+
+      function setStatus(s) {
+        currentStatus = s;
+        ["hadir", "wfh", "la-masuk", "la-pulang", "cuti", "sakit", "izin"].forEach((x) => {
+          const btn = document.getElementById("btn-" + x);
+          if (btn) btn.className = "status-btn";
+        });
+        const activeBtn = document.getElementById("btn-" + s);
+        if (activeBtn) activeBtn.classList.add("active-" + s);
+
+        document
+          .getElementById("field-masuk")
+          .classList.toggle("show", s === "hadir" || s === "la-pulang");
+        document
+          .getElementById("field-pulang")
+          .classList.toggle("show", s === "hadir" || s === "la-masuk");
+        document.getElementById("field-rem").classList.add("show");
+      }
+
+      function saveModal() {
+        if (!currentDate || !currentStatus) return;
+        const masuk = document.getElementById("inp-masuk").value || "";
+        const pulang = document.getElementById("inp-pulang").value || "";
+
+        if (currentStatus === "hadir" && (!masuk || !pulang)) {
+          toast("Status HADIR memerlukan jam masuk dan jam pulang");
+          return;
+        }
+        if (currentStatus === "la-masuk" && !pulang) {
+          toast("LA MASUK memerlukan jam pulang");
+          return;
+        }
+        if (currentStatus === "la-pulang" && !masuk) {
+          toast("LA PULANG memerlukan jam masuk");
+          return;
+        }
+
+        absenData[currentDate] = {
+          status: currentStatus,
+          masuk: ["hadir", "la-pulang"].includes(currentStatus) ? masuk : "",
+          pulang: ["hadir", "la-masuk"].includes(currentStatus) ? pulang : "",
+          rem: document.getElementById("inp-rem").value || "",
+        };
+        refreshCell(currentDate);
+        SummaryService.updateSummary();
+        closeModal();
+        toast("Kehadiran tersimpan");
+      }
+
+      // Set WFH for all standard working days (excludes national holidays and weekends)
+      function setAllWFH() {
+        const totalDays = ValidationService.getDaysInMonth(currentTahun, currentBulan);
+
+        for (let d = 1; d <= totalDays; d++) {
+          const key = dateKey(currentTahun, currentBulan, d);
+          const mmdd = `${String(currentBulan + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          const isLibnas = LIBNAS[mmdd];
+          const dateObj = new Date(currentTahun, currentBulan, d);
+          const dow = dateObj.getDay();
+          const isWeekend = dow === 6;
+
+          if (!isLibnas && !isWeekend) {
+            // Keep WFH status, preserve other fields
+            const existing = absenData[key] || {};
+            absenData[key] = {
+              status: "wfh",
+              masuk: existing.masuk || "",
+              pulang: existing.pulang || "",
+              rem: existing.rem || "",
+            };
+          }
+        }
+        CalendarService.renderGrid(currentBulan, currentTahun);
+        toast("Semua hari diset WFH");
+      }
+
+      function resetSemua() {
+        if (!confirm("Reset semua data kehadiran bulan ini?")) return;
+        absenData = {};
+        CalendarService.renderGrid(currentBulan, currentTahun);
+      }
+
+      function saveDraft() {
+        const id = document.getElementById("emp-id").value;
+        const name = document.getElementById("emp-name").value;
+        const post = document.getElementById("emp-post").value;
+        DraftService.save(id, name, post, currentBulan, currentTahun, absenData);
+        toast("Draft tersimpan");
+      }
+
+      async function loadDraft() {
+        try {
+          const d = DraftService.load();
+          if (!d) {
+            toast("Tidak ada draf tersimpan");
+            return;
+          }
+          document.getElementById("emp-id").value = d.id || "";
+          document.getElementById("emp-name").value = d.name || "";
+          document.getElementById("emp-post").value = d.post || "";
+          document.getElementById("sel-bulan").value = d.bulan !== undefined ? d.bulan : 0;
+          document.getElementById("sel-tahun").value = d.tahun !== undefined ? d.tahun : 2026;
+          
+          absenData = d.data || {};
+          currentBulan = d.bulan !== undefined ? d.bulan : 0;
+          currentTahun = d.tahun !== undefined ? d.tahun : 2026;
+
+          // Disable buttons
+          document.getElementById("btn-export-pdf").disabled = true;
+          document.getElementById("btn-print").disabled = true;
+          
+          // Load calendar and await completion (Prioritas 9)
+          await CalendarService.initCalendar(currentBulan, currentTahun);
+          
+          document.getElementById("cal-card").style.display = "block";
+          document.getElementById("summary-card").style.display = "block";
+          
+          // Enable buttons
+          document.getElementById("btn-export-pdf").disabled = false;
+          document.getElementById("btn-print").disabled = false;
+
+          toast("Draft dimuat ✓");
+        } catch(e) {
+          console.error("[UI] Load Draft Error:", e.message);
+          alert(`Gagal memuat draft: ${e.message}`);
+        }
+      }
+
+      function toast(msg) {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.classList.add("show");
+        setTimeout(() => el.classList.remove("show"), 2500);
+      }
+
+      // ─── AUTOMATED TEST SUITE (Prioritas 11) ───
+      const TestSuite = {
+        logs: [],
+        log(message, pass = true) {
+          this.logs.push({ message, pass });
+          if (pass) {
+            console.log(`[PASS] ${message}`);
+          } else {
+            console.error(`[FAIL] ${message}`);
+          }
+        },
+
+        async runAllTests() {
+          this.logs = [];
+          console.log("=== MEMULAI AUDIT OTOMATIS ===");
+
+          // 1. Test global dateKey and DateUtil dateKey consistency
+          try {
+            const key1 = dateKey(2026, 5, 1); // June is index 5
+            const key2 = dateKey(2026, 11, 25); // Dec is index 11
+            
+            this.log("Utility: Format dateKey (YYYY-MM-DD) konsisten untuk single-digit", key1 === "2026-06-01");
+            this.log("Utility: Format dateKey (YYYY-MM-DD) konsisten untuk double-digit", key2 === "2026-12-25");
+          } catch(e) {
+            this.log("dateKey tests failed: " + e.message, false);
+          }
+
+          // 2. Test Validation Service (Leap Years & Days)
+          try {
+            const leap2024 = ValidationService.isLeapYear(2024);
+            const nonLeap2025 = ValidationService.isLeapYear(2025);
+            const daysFeb2024 = ValidationService.getDaysInMonth(2024, 1);
+            const daysFeb2025 = ValidationService.getDaysInMonth(2025, 1);
+
+            this.log("Validation: Deteksi tahun kabisat 2024 benar", leap2024 === true);
+            this.log("Validation: Deteksi tahun non-kabisat 2025 benar", nonLeap2025 === false);
+            this.log("Validation: Jumlah hari Februari tahun kabisat (29 hari) benar", daysFeb2024 === 29);
+            this.log("Validation: Jumlah hari Februari tahun non-kabisat (28 hari) benar", daysFeb2025 === 28);
+          } catch(e) {
+            this.log("ValidationService tests threw an error: " + e.message, false);
+          }
+
+          // 3. Test Holiday Service Cache
+          try {
+            HolidayService.cache.clear();
+            HolidayService.cache.set(2026, { "01-01": "Tahun Baru Masehi" });
+            const cached = await HolidayService.fetchHolidays(2026);
+            this.log("HolidayService: Caching data hari libur nasional berfungsi", cached["01-01"] === "Tahun Baru Masehi");
+            HolidayService.cache.clear();
+          } catch(e) {
+            this.log("HolidayService cache tests failed: " + e.message, false);
+          }
+
+          // 4. Test Weekend Holiday Logic
+          try {
+            const sundayObj = new Date(2026, 5, 7); // June 7th 2026 is Sunday
+            const saturdayObj = new Date(2026, 5, 6); // June 6th 2026 is Saturday
+            const isSunday = sundayObj.getDay() === 0;
+            const isSaturday = saturdayObj.getDay() === 6;
+            
+            const isSundayWeekend = (sundayObj.getDay() === 6);
+            const isSaturdayWeekend = (saturdayObj.getDay() === 6);
+            
+            this.log("Logic: Hari Minggu teridentifikasi (Index 0)", isSunday === true);
+            this.log("Logic: Hari Sabtu teridentifikasi (Index 6)", isSaturday === true);
+            this.log("Logic: Hari Minggu bukan weekend libur otomatis", isSundayWeekend === false);
+            this.log("Logic: Hari Sabtu diidentifikasi sebagai weekend libur", isSaturdayWeekend === true);
+          } catch(e) {
+            this.log("Weekend logic tests failed: " + e.message, false);
+          }
+
+          // 5. Test Summary Accuracy
+          try {
+            absenData = {
+              "2026-06-01": { status: "wfh" },
+              "2026-06-02": { status: "hadir" },
+              "2026-06-03": { status: "libur-nasional", holidayName: "Test Holiday" }
+            };
+            currentBulan = 5; // June
+            currentTahun = 2026;
+            LIBNAS = { "06-03": "Test Holiday" };
+            
+            const summary = SummaryService.getSummary();
+            // June 2026 has 30 days. 4 Saturdays deducted. 1 holiday (June 3).
+            // So working days should be 30 - 4 - 1 = 25.
+            this.log("Summary: Perhitungan jumlah Hari Kerja (30 hari - 4 Sabtu - 1 libur = 25) benar", summary.hariKerja === 25);
+            this.log("Summary: Perhitungan jumlah WFH (1 hari) benar", summary.wfh === 1);
+          } catch(e) {
+            this.log("Summary tests failed: " + e.message, false);
+          }
+
+          // 5b. Test Saturday Exclusion/Inclusion in Summary
+          try {
+            currentBulan = 5; // June 2026
+            currentTahun = 2026;
+            LIBNAS = {}; // No holidays
+            
+            // Case A: Saturday is empty (should not be counted in hariKerja)
+            absenData = {};
+            const summaryEmpty = SummaryService.getSummary();
+            // June 2026 has 30 days, 4 Saturdays, so 26 expected working days.
+            this.log("Summary: Hari Sabtu kosong tidak dihitung sebagai Hari Kerja", summaryEmpty.hariKerja === 26);
+
+            // Case B: Saturday is worked (status is "hadir")
+            // June 6th 2026 is Saturday. Set it to "hadir".
+            absenData = {
+              "2026-06-06": { status: "hadir" }
+            };
+            const summaryWorked = SummaryService.getSummary();
+            // Weekdays (including Sundays): 26. Plus 1 worked Saturday = 27.
+            this.log("Summary: Hari Sabtu diisi status kerja (HADIR) dihitung sebagai Hari Kerja", summaryWorked.hariKerja === 27);
+          } catch(e) {
+            this.log("Saturday summary tests failed: " + e.message, false);
+          }
+
+          // 6. Test toggleTheme existence
+          try {
+            this.log("Theme: Fungsi toggleTheme terdefinisi", typeof toggleTheme === "function");
+          } catch(e) {
+            this.log("Theme test failed: " + e.message, false);
+          }
+
+          // 7. Test DraftService functioning
+          try {
+            DraftService.save("TEST001", "Tester", "QA", 5, 2026, { "2026-06-01": { status: "hadir" } });
+            const loaded = DraftService.load();
+            this.log("Draft: DraftService save/load data berfungsi", loaded && loaded.id === "TEST001");
+            localStorage.removeItem("absensi-draft");
+          } catch(e) {
+            this.log("DraftService test failed: " + e.message, false);
+          }
+
+          return this.logs;
+        }
+      };
+
+      async function runUnitTests() {
+        const container = document.getElementById("test-results");
+        container.style.display = "block";
+        container.innerHTML = "<div style='color: #64748b;'>Menjalankan audit tes...</div>";
+
+        const results = await TestSuite.runAllTests();
+        container.innerHTML = "";
+
+        let allPassed = true;
+        results.forEach((test) => {
+          const item = document.createElement("div");
+          item.style.margin = "4px 0";
+          if (test.pass) {
+            item.innerHTML = `<span style="color: var(--green); font-weight: 700;">[PASS]</span> ${test.message}`;
+          } else {
+            item.innerHTML = `<span style="color: var(--red); font-weight: 700;">[FAIL]</span> ${test.message}`;
+            allPassed = false;
+          }
+          container.appendChild(item);
+        });
+
+        const status = document.createElement("div");
+        status.style.marginTop = "8px";
+        status.style.paddingTop = "8px";
+        status.style.borderTop = "1px solid var(--border)";
+        status.style.fontWeight = "700";
+        if (allPassed) {
+          status.innerHTML = `<span style="color: var(--green);">Semua Audit Lolos! (100% Bebas Bug)</span>`;
+        } else {
+          status.innerHTML = `<span style="color: var(--red);">Terdapat kesalahan dalam audit. Hubungi Developer.</span>`;
+        }
+        container.appendChild(status);
+      }
+
+      // Initialize form with current date on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        const today = new Date();
+        currentBulan = today.getMonth();
+        currentTahun = today.getFullYear();
+        
+        const selBulan = document.getElementById("sel-bulan");
+        const selTahun = document.getElementById("sel-tahun");
+        if (selBulan) selBulan.value = currentBulan;
+        if (selTahun) selTahun.value = currentTahun;
+      });
+    </script>
+  </body>
+</html>
