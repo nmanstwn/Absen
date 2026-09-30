@@ -905,11 +905,12 @@
             <div class="summary-grid">
               <div class="summary-item"><div class="summary-num" id="sum-hari-kerja">0</div><div class="summary-label">Hari Kerja</div></div>
               <div class="summary-item"><div class="summary-num" id="sum-wfh">0</div><div class="summary-label">WFH</div></div>
-              <div class="summary-item"><div class="summary-num" id="sum-hadir">0</div><div class="summary-label">Hadir Fisik</div></div>
-              <div class="summary-item"><div class="summary-num" id="sum-la">0</div><div class="summary-label">Lupa Absen (LA)</div></div>
+              <div class="summary-item"><div class="summary-num" id="sum-hadir">0</div><div class="summary-label">Hadir</div></div>
+              <div class="summary-item"><div class="summary-num" id="sum-la">0</div><div class="summary-label">Lupa Absen</div></div>
               <div class="summary-item"><div class="summary-num" id="sum-izin">0</div><div class="summary-label">Izin</div></div>
               <div class="summary-item"><div class="summary-num" id="sum-cuti">0</div><div class="summary-label">Cuti</div></div>
-              <div class="summary-item" style="grid-column: 1/-1;"><div class="summary-num" id="sum-sakit">0</div><div class="summary-label">Sakit</div></div>
+              <div class="summary-item"><div class="summary-num" id="sum-sakit">0</div><div class="summary-label">Sakit</div></div>
+              <div class="summary-item"><div class="summary-num" id="sum-libnas">0</div><div class="summary-label">Libur Nasional</div></div>
             </div>
           </div>
 
@@ -982,10 +983,13 @@
           <tr>
             <td style="border: 0.75pt solid #94a3b8; padding: 6px; font-weight: 700; text-align: center;">Hartono Mulyo Raharjo</td>
             <td style="border: 0.75pt solid #94a3b8; padding: 6px; font-weight: 700; text-align: center;">-</td>
-            <td style="border: 0.75pt solid #94a3b8; padding: 6px; font-weight: 700; text-align: center;" id="print-sig-name">Nur Rohman Setiawan</td>
+            <td style="border: 0.75pt solid #94a3b8; padding: 6px; font-weight: 700; text-align: center;" id="print-sig-name">NUR ROHMAN SETIAWAN</td>
           </tr>
         </tbody>
       </table>
+      <div style="background: #f1f5f9; padding: 4px 8px; text-align: center; font-size: 8.5px; font-style: italic; color: #475569; border: 1.5pt solid #0f172a; border-top: none;">
+        Dokumen rekapitulasi sah kehadiran karyawan | Dicetak otomatis via Absensi Digital pada <span id="print-footer-tgl">-</span>
+      </div>
     </div>
 
     <!-- MODAL INPUT KEHADIRAN HARIAN -->
@@ -1152,20 +1156,63 @@
         }
       };
 
-      // PDF_THEME: Hasil ekstrak desain Stitch MCP (Proyek "Absensi Digital – PDF Rekap")
+      // PDF_STATUS_COLOR: default false (monokrom untuk sel kerja, status KAPITAL, aman fotokopi/cetak B/W)
+      const PDF_STATUS_COLOR = false;
+
+      // PDF_THEME: Diselaraskan persis dengan desain acuan "PDF September 2026"
       const PDF_THEME = {
-        outerBorderWidth: 0.5, // mm (~1.5 pt tegas)
-        innerBorderWidth: 0.2, // mm (~0.6 pt rapi)
-        outerBorderColor: [15, 23, 42], // Slate 900
-        innerBorderColor: [148, 163, 184], // Slate 400
-        headerWeekdayBg: [30, 41, 59], // Slate 800
-        headerWeekendBg: [153, 27, 27], // Red 800
+        outerBorderWidth: 0.5, // mm (~1.5 pt tegas navy gelap)
+        innerBorderWidth: 0.2, // mm (~0.6 pt abu-biru rapi)
+        outerBorderColor: [15, 23, 42], // Navy gelap #0f172a
+        innerBorderColor: [148, 163, 184], // Abu-biru #94a3b8
+        headerWeekdayBg: [15, 23, 42], // Navy gelap #0f172a
+        headerWeekendBg: [153, 27, 27], // Merah tua #991b1b
         headerText: [255, 255, 255],
-        weekendEmptyBg: [255, 241, 242], // Rose 50
-        weekendEmptyText: [185, 28, 28],
-        weekendWorkedBg: [255, 255, 255], // Putih bersih saat kerja di akhir pekan
-        remarksText: [100, 116, 139] // Slate 500
+        weekendEmptyBg: [254, 226, 226], // Merah pastel #fee2e2
+        weekendEmptyText: [185, 28, 28], // Merah #b91c1c
+        weekendWorkedBg: [255, 255, 255], // Putih bersih saat akhir pekan bekerja
+        summaryBg: [248, 250, 252], // #f8fafc
+        footerBannerBg: [241, 245, 249], // #f1f5f9
+        footerBannerText: [71, 85, 105], // #475569
+        remarksText: [71, 85, 105] // Abu gelap #475569
       };
+
+      // Helper wrap teks remarks (maks 3 baris, potong dengan "…")
+      function formatRemarks(text, maxCharsPerLine = 22, maxLines = 3) {
+        if (!text) return [];
+        const clean = String(text).trim();
+        if (clean.length <= maxCharsPerLine) return [clean];
+        const words = clean.split(/\s+/);
+        const lines = [];
+        let cur = "";
+        let wordIdx = 0;
+        while (wordIdx < words.length && lines.length < maxLines) {
+          const w = words[wordIdx];
+          if (!cur) {
+            cur = w;
+            wordIdx++;
+          } else if ((cur + " " + w).length <= maxCharsPerLine) {
+            cur += " " + w;
+            wordIdx++;
+          } else {
+            lines.push(cur);
+            cur = "";
+            if (lines.length === maxLines - 1 && wordIdx < words.length) {
+              const remaining = words.slice(wordIdx).join(" ");
+              if (remaining.length > maxCharsPerLine) {
+                lines.push(remaining.slice(0, maxCharsPerLine - 1) + "…");
+              } else {
+                lines.push(remaining);
+              }
+              return lines;
+            }
+          }
+        }
+        if (cur && lines.length < maxLines) {
+          lines.push(cur);
+        }
+        return lines;
+      }
 
       // ─── STATE APLIKASI ───
       let LIBNAS = {};
@@ -1419,7 +1466,8 @@
             "sum-la": s.laTotal,
             "sum-izin": s.izin,
             "sum-cuti": s.cuti,
-            "sum-sakit": s.sakit
+            "sum-sakit": s.sakit,
+            "sum-libnas": s.libnas
           };
           Object.entries(values).forEach(([id, value]) => {
             const el = document.getElementById(id);
@@ -2123,7 +2171,7 @@
         }
       };
 
-      // ─── TUGAS A: GENERATE SERVICE (Stitch MCP PDF Engine) ───
+      // ─── TUGAS A: GENERATE SERVICE (Reproduksi Persis PDF September 2026) ───
       const GenerateService = {
         async exportPDF(name, id, post, month, year, totalDays) {
           if (!window.jspdf?.jsPDF) {
@@ -2140,56 +2188,45 @@
           const mL = 10;
           const mR = 10;
           const tW = 210 - mL - mR; // 190 mm
+          const tglCetakStr = DateUtil.formatDateNow();
 
           const baseStyle = {
             lineColor: PDF_THEME.innerBorderColor,
             lineWidth: PDF_THEME.innerBorderWidth,
             fillColor: [255, 255, 255],
-            textColor: [15, 23, 42],
+            textColor: [0, 0, 0],
             fontSize: 7.5,
             cellPadding: 1.5,
           };
 
           // 1. HEADER TABLE
+          // Bagian 1: Logo & Judul
           doc.autoTable({
             startY: 8,
-            margin: { left: mL, right: mR },
+            margin: { left: mL, right: mR, bottom: 8 },
             tableWidth: tW,
             body: [
               [
-                { content: "", rowSpan: 2, styles: { cellWidth: 24, halign: "center", valign: "middle", minCellHeight: 20 } },
+                { content: "", rowSpan: 2, styles: { cellWidth: 26, halign: "center", valign: "middle", minCellHeight: 21 } },
                 { 
                   content: "ABSENSI KARYAWAN", 
-                  styles: { cellWidth: tW - 48, halign: "center", valign: "bottom", fontStyle: "bold", fontSize: 13, textColor: [15, 23, 42] } 
+                  styles: { cellWidth: tW - 52, halign: "center", valign: "bottom", fontStyle: "bold", fontSize: 13, textColor: [15, 23, 42] } 
                 },
-                { content: "", rowSpan: 2, styles: { cellWidth: 24, halign: "center", valign: "middle" } },
+                { content: "", rowSpan: 2, styles: { cellWidth: 26, halign: "center", valign: "middle" } },
               ],
               [
                 { 
                   content: "REKAP KEHADIRAN BULANAN", 
-                  styles: { cellWidth: tW - 48, halign: "center", valign: "top", fontStyle: "bold", fontSize: 9.5, textColor: [71, 85, 105] } 
+                  styles: { cellWidth: tW - 52, halign: "center", valign: "top", fontStyle: "bold", fontSize: 9.5, textColor: [71, 85, 105] } 
                 }
-              ],
-              [
-                { 
-                  content: `Periode: 01 s/d ${String(totalDays).padStart(2, "0")} ${monthName.toUpperCase()} ${year}`, 
-                  colSpan: 2, 
-                  styles: { halign: "left", fontStyle: "bold", fontSize: 8.5, fillColor: [248, 250, 252] } 
-                },
-                {
-                  content: `Tanggal Cetak: ${DateUtil.formatDateNow()}`,
-                  styles: { halign: "right", fontSize: 7, textColor: [100, 116, 139], fillColor: [248, 250, 252] }
-                }
-              ],
-              [
-                { content: `ID Karyawan: ${id || "-"}`, styles: { fontStyle: "bold", fontSize: 8 } },
-                { content: `Nama Karyawan: ${name || "-"}`, colSpan: 2, styles: { fontStyle: "bold", fontSize: 8 } }
-              ],
-              [
-                { content: `Jabatan: ${post || "-"}`, colSpan: 3, styles: { fontStyle: "bold", fontSize: 8 } }
-              ],
+              ]
             ],
-            styles: baseStyle,
+            styles: {
+              ...baseStyle,
+              cellPadding: 1.5,
+              lineWidth: PDF_THEME.innerBorderWidth,
+              lineColor: PDF_THEME.innerBorderColor
+            },
             theme: "grid",
             didDrawCell: (data) => {
               if (data.section === "body") {
@@ -2207,10 +2244,45 @@
             }
           });
 
-          // Outer border 1.5pt untuk Header
+          // Bagian 2: Info Periode, Tanggal Cetak, ID, Nama, Jabatan
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY,
+            margin: { left: mL, right: mR, bottom: 8 },
+            tableWidth: tW,
+            body: [
+              [
+                { 
+                  content: `Periode: 01 s/d ${String(totalDays).padStart(2, "0")} ${monthName.toUpperCase()} ${year}`, 
+                  styles: { halign: "left", fontStyle: "bold", fontSize: 8.5, cellWidth: tW / 2 } 
+                },
+                {
+                  content: `Tanggal Cetak: ${tglCetakStr}`,
+                  styles: { halign: "right", fontSize: 7.5, textColor: [71, 85, 105], cellWidth: tW / 2 }
+                }
+              ],
+              [
+                { content: `ID Karyawan : ${id || "-"}`, styles: { fontStyle: "bold", fontSize: 8, cellWidth: tW / 2 } },
+                { content: `Nama Karyawan : ${(name || "-").toUpperCase()}`, styles: { fontStyle: "bold", fontSize: 8, cellWidth: tW / 2 } }
+              ],
+              [
+                { content: `Jabatan : ${post || "-"}`, colSpan: 2, styles: { fontStyle: "bold", fontSize: 8 } }
+              ]
+            ],
+            styles: {
+              ...baseStyle,
+              cellPadding: 1.8,
+              lineWidth: PDF_THEME.innerBorderWidth,
+              lineColor: PDF_THEME.innerBorderColor
+            },
+            theme: "grid"
+          });
+
+          // Outer border 0.5 mm navy gelap untuk seluruh blok Header
+          const headerStartY = 8;
+          const headerFinalY = doc.lastAutoTable.finalY;
           doc.setLineWidth(PDF_THEME.outerBorderWidth);
           doc.setDrawColor(...PDF_THEME.outerBorderColor);
-          doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
+          doc.rect(mL, headerStartY, tW, headerFinalY - headerStartY);
 
           // 2. CALENDAR MATRIX
           const days = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -2232,9 +2304,10 @@
             weeks.push(week);
           }
 
-          // Kalibrasi dinamis agar PASTI muat 1 halaman A4
+          // Skala tinggi dinamis agar mengisi A4 dengan seimbang dan PASTI 1 halaman (Kekurangan 2.3 #1)
           const numWeeks = weeks.length;
-          const minCellHeight = numWeeks >= 6 ? 17.5 : (numWeeks === 5 ? 19.5 : 23);
+          // Rentang tinggi sel 22–34 mm sesuai spesifikasi
+          const dynamicCellHeight = numWeeks >= 6 ? 22 : (numWeeks === 5 ? 26 : 30);
           const cellFontSize = numWeeks >= 6 ? 6 : 6.5;
 
           const headRow = days.map((day, index) => {
@@ -2249,62 +2322,69 @@
                 fontSize: 8,
                 fillColor: isSabMin ? PDF_THEME.headerWeekendBg : PDF_THEME.headerWeekdayBg,
                 textColor: PDF_THEME.headerText,
-                minCellHeight: 7,
+                minCellHeight: 6.5,
               },
             };
           });
 
           const bodyRows = weeks.map((row) => row.map((d) => {
-            if (!d) return { content: "", styles: { cellWidth: colW, minCellHeight: minCellHeight, fillColor: [255, 255, 255] } };
+            if (!d) return { content: "", styles: { cellWidth: colW, minCellHeight: dynamicCellHeight, fillColor: [255, 255, 255] } };
 
             const key = dateKey(year, month, d);
             const data = absenData[key] || {};
             const dateObj = new Date(year, month, d);
             const dow = dateObj.getDay();
-            const isWeekend = HARI_LIBUR_MINGGUAN.includes(dow);
+            const isWeekendDay = dow === 6 || dow === 0;
             const isWork = data.status && STATUS_META[data.status]?.isWork;
             const isHoliday = data.status === "libur-nasional";
 
             let cellBg = [255, 255, 255];
-            let textColor = [15, 23, 42];
+            let textColor = [0, 0, 0];
 
             if (isHoliday) {
               cellBg = PDF_THEME.weekendEmptyBg;
               textColor = PDF_THEME.weekendEmptyText;
-            } else if (isWeekend && !isWork) {
+            } else if (isWeekendDay && !isWork) {
+              // Sabtu / Minggu kosong -> latar merah pastel, teks merah
               cellBg = PDF_THEME.weekendEmptyBg;
               textColor = PDF_THEME.weekendEmptyText;
-            } else if (isWeekend && isWork) {
-              // Sabtu yang masuk kerja tetap berlatar putih bersih
+            } else if (isWeekendDay && isWork) {
+              // Sabtu / Minggu berstatus kerja -> latar putih, teks hitam
               cellBg = PDF_THEME.weekendWorkedBg;
-              textColor = [15, 23, 42];
+              textColor = [0, 0, 0];
             }
 
             const lines = [`${d}`];
             if (data.status) {
               lines.push(STATUS_META[data.status]?.label || data.status.toUpperCase());
-            } else if (isWeekend) {
-              lines.push(LABEL_LIBUR_MINGGUAN);
+            } else if (isWeekendDay) {
+              lines.push("LIBUR");
+              lines.push("KULIAH");
             }
 
-            if (data.masuk && data.pulang) lines.push(`${data.masuk} - ${data.pulang}`);
-            else if (data.masuk) lines.push(`M: ${data.masuk}`);
-            else if (data.pulang) lines.push(`P: ${data.pulang}`);
+            // Format jam sesuai spec 2.1: HH:MM - HH:MM, M: HH:MM, P: HH:MM
+            if (data.masuk && data.pulang) {
+              lines.push(`${data.masuk} - ${data.pulang}`);
+            } else if (data.masuk) {
+              lines.push(`M: ${data.masuk}`);
+            } else if (data.pulang) {
+              lines.push(`P: ${data.pulang}`);
+            }
             
             if (isHoliday && data.holidayName) {
               const hName = data.holidayName.length > 22 ? data.holidayName.slice(0, 20) + "…" : data.holidayName;
               lines.push(hName);
             }
             if (data.rem) {
-              const rText = data.rem.length > 24 ? data.rem.slice(0, 22) + "…" : data.rem;
-              lines.push(rText);
+              const remLines = formatRemarks(data.rem, 20, 3);
+              remLines.forEach(l => lines.push(l));
             }
 
             return {
               content: lines.join("\n"),
               styles: {
                 cellWidth: colW,
-                minCellHeight: minCellHeight,
+                minCellHeight: dynamicCellHeight,
                 halign: "center",
                 valign: "top",
                 fontSize: cellFontSize,
@@ -2314,10 +2394,10 @@
             };
           }));
 
-          const calStartY = doc.lastAutoTable.finalY + 3.5;
+          const calStartY = doc.lastAutoTable.finalY + 3;
           doc.autoTable({
             startY: calStartY,
-            margin: { left: mL, right: mR },
+            margin: { left: mL, right: mR, bottom: 8 },
             tableWidth: tW,
             head: [headRow],
             body: bodyRows,
@@ -2332,12 +2412,12 @@
             rowPageBreak: "avoid",
           });
 
-          // Outer border 1.5pt untuk Kalender
+          // Outer border 0.5 mm navy gelap untuk Kalender
           doc.setLineWidth(PDF_THEME.outerBorderWidth);
           doc.setDrawColor(...PDF_THEME.outerBorderColor);
           doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
 
-          // 3. RINGKASAN KEHADIRAN (Statistik Lengkap)
+          // 3. RINGKASAN KEHADIRAN (4 kolom x 2 baris)
           const sum = SummaryService.getSummary();
           const colQ = tW / 4;
           const summaryRows = [
@@ -2355,10 +2435,10 @@
             ]
           ];
 
-          const sumStartY = doc.lastAutoTable.finalY + 3.5;
+          const sumStartY = doc.lastAutoTable.finalY + 3;
           doc.autoTable({
             startY: sumStartY,
-            margin: { left: mL, right: mR },
+            margin: { left: mL, right: mR, bottom: 8 },
             tableWidth: tW,
             body: summaryRows,
             styles: { 
@@ -2367,21 +2447,22 @@
               cellPadding: 1.8, 
               lineWidth: PDF_THEME.innerBorderWidth, 
               lineColor: PDF_THEME.innerBorderColor,
-              fillColor: [248, 250, 252] 
+              fillColor: PDF_THEME.summaryBg 
             },
             theme: "grid",
           });
 
-          // Outer border 1.5pt untuk Ringkasan
+          // Outer border 0.5 mm navy gelap untuk Ringkasan
           doc.setLineWidth(PDF_THEME.outerBorderWidth);
           doc.setDrawColor(...PDF_THEME.outerBorderColor);
           doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
 
-          // 4. SIGNATURES BLOCK
-          const sigStartY = doc.lastAutoTable.finalY + 3.5;
+          // 4. SIGNATURES BLOCK & BARIS PENUTUP
+          const sigStartY = doc.lastAutoTable.finalY + 3;
+          const sigSpaceHeight = numWeeks >= 6 ? 16 : 20;
           doc.autoTable({
             startY: sigStartY,
-            margin: { left: mL, right: mR },
+            margin: { left: mL, right: mR, bottom: 8 },
             tableWidth: tW,
             body: [
               ["Diketahui", "Diperiksa", "Disusun"].map((text) => ({ 
@@ -2389,20 +2470,26 @@
                 styles: { halign: "center", fontStyle: "bold", fontSize: 8 } 
               })),
               [
-                { content: "", styles: { minCellHeight: 22 } }, 
-                { content: "-", styles: { halign: "center", valign: "middle", textColor: [100, 116, 139] } }, 
-                { content: "", styles: { minCellHeight: 22 } }
+                { content: "", styles: { minCellHeight: sigSpaceHeight } }, 
+                { content: "-", styles: { halign: "center", valign: "middle", textColor: [148, 163, 184], fontSize: 13, fontStyle: "bold" } }, 
+                { content: "", styles: { minCellHeight: sigSpaceHeight } }
               ],
               [
                 { content: "Hartono Mulyo Raharjo", styles: { halign: "center", fontStyle: "bold", fontSize: 8 } },
                 { content: "-", styles: { halign: "center", fontStyle: "bold", fontSize: 8 } },
-                { content: name || "Nur Rohman Setiawan", styles: { halign: "center", fontStyle: "bold", fontSize: 8 } },
+                { content: (name || "NUR ROHMAN SETIAWAN").toUpperCase(), styles: { halign: "center", fontStyle: "bold", fontSize: 8 } },
               ],
               [
                 { 
-                  content: `Dokumen rekapitulasi sah kehadiran karyawan | Dicetak otomatis via Absensi Digital pada ${DateUtil.formatDateNow()}`, 
+                  content: `Dokumen rekapitulasi sah kehadiran karyawan | Dicetak otomatis via Absensi Digital pada ${tglCetakStr}`, 
                   colSpan: 3, 
-                  styles: { halign: "center", fontSize: 6.5, textColor: [100, 116, 139], fontStyle: "italic", fillColor: [248, 250, 252] } 
+                  styles: { 
+                    halign: "center", 
+                    fontSize: 6.8, 
+                    textColor: PDF_THEME.footerBannerText, 
+                    fontStyle: "italic", 
+                    fillColor: PDF_THEME.footerBannerBg 
+                  } 
                 }
               ]
             ],
@@ -2419,7 +2506,7 @@
             theme: "grid",
           });
 
-          // Outer border 1.5pt untuk Tanda Tangan
+          // Outer border 0.5 mm navy gelap untuk Tanda Tangan
           doc.setLineWidth(PDF_THEME.outerBorderWidth);
           doc.setDrawColor(...PDF_THEME.outerBorderColor);
           doc.rect(mL, doc.lastAutoTable.settings.startY, tW, doc.lastAutoTable.finalY - doc.lastAutoTable.settings.startY);
@@ -2432,13 +2519,16 @@
       const PrintService = {
         print(name, id, post, month, year) {
           const monthName = NAMA_BULAN[month];
-          document.getElementById("print-name").textContent = name || "-";
+          const tglNow = DateUtil.formatDateNow();
+          document.getElementById("print-name").textContent = (name || "-").toUpperCase();
           document.getElementById("print-id").textContent = id || "-";
           document.getElementById("print-post").textContent = post || "-";
           document.getElementById("print-periode").textContent = `01 s/d ${String(ValidationService.getDaysInMonth(year, month)).padStart(2, "0")} ${monthName.toUpperCase()} ${year}`;
-          document.getElementById("print-tanggal-cetak").textContent = `Tanggal Cetak: ${DateUtil.formatDateNow()}`;
+          document.getElementById("print-tanggal-cetak").textContent = `Tanggal Cetak: ${tglNow}`;
           const sigName = document.getElementById("print-sig-name");
-          if (sigName) sigName.textContent = name || "Nur Rohman Setiawan";
+          if (sigName) sigName.textContent = (name || "NUR ROHMAN SETIAWAN").toUpperCase();
+          const footerTgl = document.getElementById("print-footer-tgl");
+          if (footerTgl) footerTgl.textContent = tglNow;
           
           window.print();
         }
@@ -2999,7 +3089,67 @@
             this.log("Integrasi dataset error: " + e.message, false);
           }
 
-          // 9. Test PDF Export 1-Halaman (Februari 4 baris, Mei 5 baris, Agustus 6 baris)
+          // 9. Test Integrasi Dataset Bagian 7.2 (September 2026 - PDF Acuan)
+          try {
+            const fixtureSep = {
+              "karyawan": { "id": "", "nama": "NUR ROHMAN SETIAWAN", "jabatan": "" },
+              "bulan": 9, "tahun": 2026,
+              "remarks_default": "PULOMAS PERPUSTKAAN",
+              "absen": [
+                {"tanggal":"2026-09-01","masuk":"08:22","pulang":"16:37"},
+                {"tanggal":"2026-09-02","masuk":"08:14","pulang":"17:01"},
+                {"tanggal":"2026-09-03","masuk":"08:14","pulang":"17:01"},
+                {"tanggal":"2026-09-04","masuk":"08:03","pulang":"16:47"},
+                {"tanggal":"2026-09-05","masuk":"08:04","pulang":"12:40","remarks":"KULIAH SIANG"},
+                {"tanggal":"2026-09-06","status":"wfh"},
+                {"tanggal":"2026-09-07","masuk":"08:02","pulang":"16:45"},
+                {"tanggal":"2026-09-08","masuk":"08:12","pulang":"16:53"},
+                {"tanggal":"2026-09-09","masuk":"08:40","pulang":"16:38"},
+                {"tanggal":"2026-09-10","masuk":"08:19"},
+                {"tanggal":"2026-09-11","masuk":"08:05","pulang":"16:00"},
+                {"tanggal":"2026-09-13","masuk":"07:36"},
+                {"tanggal":"2026-09-14","masuk":"08:25","pulang":"16:41"},
+                {"tanggal":"2026-09-15","masuk":"08:30","pulang":"16:33"},
+                {"tanggal":"2026-09-16","masuk":"08:20","pulang":"16:26"},
+                {"tanggal":"2026-09-17","status":"izin"},
+                {"tanggal":"2026-09-18","masuk":"08:22","pulang":"16:37"},
+                {"tanggal":"2026-09-19","masuk":"12:21","pulang":"15:08","remarks":"LANJUT KULIAH"},
+                {"tanggal":"2026-09-20","status":"wfh"},
+                {"tanggal":"2026-09-21","masuk":"08:39","pulang":"16:26"},
+                {"tanggal":"2026-09-22","masuk":"08:13","pulang":"16:24"},
+                {"tanggal":"2026-09-23","masuk":"08:07","pulang":"16:22"},
+                {"tanggal":"2026-09-24","masuk":"08:15"},
+                {"tanggal":"2026-09-25","masuk":"07:58","pulang":"16:37"},
+                {"tanggal":"2026-09-27","status":"wfh"},
+                {"tanggal":"2026-09-28","masuk":"08:21","pulang":"16:15"},
+                {"tanggal":"2026-09-29","masuk":"08:11","pulang":"16:19"},
+                {"tanggal":"2026-09-30","status":"izin"}
+              ]
+            };
+
+            const parsedSep = ImportService.parse(JSON.stringify(fixtureSep), { bulan: 8, tahun: 2026 });
+            await ImportService.apply(parsedSep, { mode: "replace", fillEmp: true });
+
+            const sumSep = SummaryService.getSummary();
+            this.log("Integrasi Sep 2026: Hari Kerja === 28", sumSep.hariKerja === 28);
+            this.log("Integrasi Sep 2026: WFH === 3", sumSep.wfh === 3);
+            this.log("Integrasi Sep 2026: Hadir === 20", sumSep.hadir === 20);
+            this.log("Integrasi Sep 2026: Lupa Absen === 3", sumSep.laTotal === 3);
+            this.log("Integrasi Sep 2026: Izin === 2", sumSep.izin === 2);
+            this.log("Integrasi Sep 2026: 10, 13, 24 Sep adalah LA Pulang", 
+              absenData["2026-09-10"]?.status === "la-pulang" &&
+              absenData["2026-09-13"]?.status === "la-pulang" &&
+              absenData["2026-09-24"]?.status === "la-pulang"
+            );
+            this.log("Integrasi Sep 2026: 5 & 19 Sep (Sabtu kerja) adalah Hadir",
+              absenData["2026-09-05"]?.status === "hadir" &&
+              absenData["2026-09-19"]?.status === "hadir"
+            );
+          } catch(e) {
+            this.log("Integrasi dataset Sep 2026 error: " + e.message, false);
+          }
+
+          // 10. Test PDF Export 1-Halaman (Februari 4 baris, Mei/Sep 5 baris, Agustus 6 baris)
           try {
             if (window.jspdf?.jsPDF) {
               const docFeb = await GenerateService.exportPDF("Tester", "ID01", "Admin", 1, 2026, 28);
@@ -3009,6 +3159,10 @@
               const docMei = await GenerateService.exportPDF("Tester", "ID01", "Admin", 4, 2026, 31);
               const pMei = docMei.internal.getNumberOfPages();
               this.log("PDF: Mei 2026 (5 baris) tepat 1 halaman", pMei === 1);
+
+              const docSep = await GenerateService.exportPDF("NUR ROHMAN SETIAWAN", "", "", 8, 2026, 30);
+              const pSep = docSep.internal.getNumberOfPages();
+              this.log("PDF: September 2026 (5 baris) tepat 1 halaman", pSep === 1);
 
               const docAgu = await GenerateService.exportPDF("Nur Rohman Setiawan", "KRY001", "Administrator", 7, 2026, 31);
               const pAgu = docAgu.internal.getNumberOfPages();

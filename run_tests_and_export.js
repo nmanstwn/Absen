@@ -43,15 +43,27 @@ server = http.createServer((req, res) => {
           return;
         }
 
-        // Process PDF
-        const dataUri = payload.pdfBase64;
-        const matches = dataUri.match(/^data:application\/pdf(?:;filename=[^;]+)?;base64,(.+)$/);
-        const base64Data = matches ? matches[1] : dataUri.split(",")[1];
-        const pdfBuffer = Buffer.from(base64Data, "base64");
+        // Process September 2026 PDF
+        if (payload.pdfSepBase64) {
+          const dataUri = payload.pdfSepBase64;
+          const matches = dataUri.match(/^data:application\/pdf(?:;filename=[^;]+)?;base64,(.+)$/);
+          const base64Data = matches ? matches[1] : dataUri.split(",")[1];
+          const pdfBuffer = Buffer.from(base64Data, "base64");
+          const targetSepPath = path.join(DOCS_DIR, "Absensi_NUR_ROHMAN_SETIAWAN_September_2026.pdf");
+          fs.writeFileSync(targetSepPath, pdfBuffer);
+          console.log(`[SUCCESS] September 2026 PDF saved to ${targetSepPath} (${pdfBuffer.length} bytes, ${payload.pageCountSep} page(s))`);
+        }
 
-        const targetPdfPath = path.join(DOCS_DIR, "pdf-preview-agustus-2026.pdf");
-        fs.writeFileSync(targetPdfPath, pdfBuffer);
-        console.log(`[SUCCESS] PDF saved to ${targetPdfPath} (${pdfBuffer.length} bytes, ${payload.pageCount} page(s))`);
+        // Process August 2026 PDF
+        if (payload.pdfAguBase64) {
+          const dataUri = payload.pdfAguBase64;
+          const matches = dataUri.match(/^data:application\/pdf(?:;filename=[^;]+)?;base64,(.+)$/);
+          const base64Data = matches ? matches[1] : dataUri.split(",")[1];
+          const pdfBuffer = Buffer.from(base64Data, "base64");
+          const targetAguPath = path.join(DOCS_DIR, "pdf-preview-agustus-2026.pdf");
+          fs.writeFileSync(targetAguPath, pdfBuffer);
+          console.log(`[SUCCESS] August 2026 PDF saved to ${targetAguPath} (${pdfBuffer.length} bytes, ${payload.pageCountAgu} page(s))`);
+        }
 
         // Print test logs
         console.log("\n=== TEST SUITE RESULTS ===");
@@ -104,7 +116,7 @@ server.listen(PORT, "127.0.0.1", () => {
 });
 
 function launchChrome() {
-  const chromePath = fs.existsSync("C:\\Program Files\\Google\Chrome\\Application\\chrome.exe")
+  const chromePath = fs.existsSync("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
     ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
     : "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 
