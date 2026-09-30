@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Runner & PDF Exporter</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+  <h2>Antigravity Test Runner & PDF Exporter</h2>
+  <div id="status">Memuat index.html...</div>
+  <iframe id="app-frame" src="/index.html" style="width: 1000px; height: 800px; border: 1px solid #ccc;"></iframe>
+
+  <script>
+    const iframe = document.getElementById("app-frame");
+
+    async function waitForServices(win, maxRetries = 20) {
+      for (let i = 0; i < maxRetries; i++) {
+        if (win.TestSuite && win.GenerateService && win.jspdf) {
+          return true;
+        }
+        await new Promise(r => setTimeout(r, 200));
+      }
+      return false;
+    }
+
+    iframe.onload = async () => {
+      const win = iframe.contentWindow;
+      const statusEl = document.getElementById("status");
+      statusEl.textContent = "Menunggu inisialisasi modul...";
+
+      const ready = await waitForServices(win);
+      if (!ready) {
+        const err = new Error("Layanan TestSuite/GenerateService/jspdf tidak tersedia setelah batas waktu.");
+        statusEl.textContent = "Error: " + err.message;
+        await fetch("/api/save-preview-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ error: err.message })
+        });
+        return;
+      }
+
+      statusEl.textContent = "Menjalankan TestSuite...";
+
+      try {
+        // 1. Run all unit tests
+        const testLogs = await win.TestSuite.runAllTests();
+        console.log("Test logs:", testLogs);
+
+        // 2. Generate PDF for August 2026 using Section 7 dataset
+        statusEl.textContent = "Meng-export PDF Agustus 2026...";
+        const doc = await win.GenerateService.exportPDF(
+          "Nur Rohman Setiawan",
+          "KRY001",
+          "Administrator",
+          7, // 7 is Agustus (0-indexed)
+          2026,
+          31
+        );
+
+        const pdfDataUri = doc.output("datauristring");
+        const pageCount = doc.internal.getNumberOfPages();
+
+        // 3. Send test results and PDF to local node server
+        statusEl.textContent = "Mengirim data ke server...";
+        await fetch("/api/save-preview-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pdfBase64: pdfDataUri,
+            pageCount: pageCount,
+            testLogs: testLogs
+          })
+        });
+
+        statusEl.textContent = "Selesai! Semua tes lolos dan PDF berhasil disimpan.";
+      } catch (err) {
+        console.error("Runner error:", err);
+        statusEl.textContent = "Error: " + err.message;
+        await fetch("/api/save-preview-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            error: err.message,
+            stack: err.stack
+          })
+        });
+      }
+    };
+  </script>
+</body>
+</html>
